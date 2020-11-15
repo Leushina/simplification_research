@@ -102,6 +102,7 @@ tqdm==4.45.0
 traitlets==4.3.3
 ujson==2.0.3
 urllib3==1.25.8
+wandb
 wasabi==0.6.0
 wcwidth==0.1.9
 webencodings==0.5.1
