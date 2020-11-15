@@ -7,3 +7,4 @@ squad2.0*
 get_transformer.py
 transformer
 Question_Generation_model.py
+data/*
