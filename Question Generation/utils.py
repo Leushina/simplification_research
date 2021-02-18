@@ -21,7 +21,7 @@ from torch.utils.data import Dataset, Sampler
 from sentence_splitter import add_newline_to_end_of_each_sentence
 from transformers import BartTokenizer, EvalPrediction, PreTrainedTokenizer, T5Tokenizer
 from transformers.file_utils import cached_property
-from transformers.modeling_bart import shift_tokens_right
+# from transformers.modeling_bart import shift_tokens_right
 
 
 try:
@@ -254,50 +254,47 @@ class Seq2SeqDataset(AbstractSeq2SeqDataset):
         # change input_ids from sep tokens to masked inputs
         # We only compute loss on masked tokens
         sep_token_id = self.tokenizer.sep_token_id
-        extract_context = lambda x: x[:np.where(x == sep_token_id)[0][0] + 1] 
+        extract_context = lambda x: x[:np.where(x == sep_token_id)[0][0] + 1]
         extract_question = lambda x: x[np.where(x == sep_token_id)[0][0] + 1:] 
         sep_position = lambda x: np.where(x == sep_token_id)[0][0] 
 
         for i, sample in enumerate(batch_encoding['input_ids']):
-          
-          labels = batch_encoding['labels'][i]
+            labels = batch_encoding['labels'][i]
 
-          cntx, qst = extract_context(sample), extract_question(sample)     
-          label_cntx = extract_context(labels)
-          input_sep_pos = sep_position(sample)
+            cntx, qst = extract_context(sample), extract_question(sample)
+            label_cntx = extract_context(labels)
+            input_sep_pos = sep_position(sample)
 
-          probability_matrix = torch.full(sample.shape, mlm_probability)
-          no_mask_tokens = torch.cat((torch.ones(cntx.shape), 
+            probability_matrix = torch.full(sample.shape, mlm_probability)
+            no_mask_tokens = torch.cat((torch.ones(cntx.shape),
                                     torch.zeros(qst.shape)))
-          
-          probability_matrix = probability_matrix.masked_fill_(no_mask_tokens==1, value=0.0)
-          probability_matrix = torch.full(sample.shape, mlm_probability)
-          masked_indices = torch.bernoulli(probability_matrix).bool()
 
-          # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
-          indices_replaced = torch.bernoulli(torch.full(sample.shape, 0.8)).bool() & masked_indices
-          batch_encoding['input_ids'][i][indices_replaced] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.mask_token)
+            probability_matrix = probability_matrix.masked_fill_(no_mask_tokens==1, value=0.0)
+            probability_matrix = torch.full(sample.shape, mlm_probability)
+            masked_indices = torch.bernoulli(probability_matrix).bool()
 
-          # 10% of the time, we replace masked input tokens with random word
-          indices_random = torch.bernoulli(torch.full(sample.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-          random_words = torch.randint(len(self.tokenizer), sample.shape, dtype=torch.long)
-          batch_encoding['input_ids'][i][indices_random] = random_words[indices_random]
+            # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
+            indices_replaced = torch.bernoulli(torch.full(sample.shape, 0.8)).bool() & masked_indices
+            batch_encoding['input_ids'][i][indices_replaced] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.mask_token)
 
-          
-          masked_context = torch.cat((torch.ones(len(label_cntx)), masked_indices[input_sep_pos:]))
+            # 10% of the time, we replace masked input tokens with random word
+            indices_random = torch.bernoulli(torch.full(sample.shape, 0.5)).bool() & masked_indices & ~indices_replaced
+            random_words = torch.randint(len(self.tokenizer), sample.shape, dtype=torch.long)
+            batch_encoding['input_ids'][i][indices_random] = random_words[indices_random]
 
-          if len(labels) > masked_context.shape[0]:
-            add_tokens = len(labels) - masked_context.shape[0]
-            masked_context = torch.cat((masked_context, torch.zeros(add_tokens)))
-          elif masked_context.shape[0] > len(labels):
-            cut_tokens = masked_context.shape[0] - len(labels)
-            masked_context = masked_context[:-cut_tokens]
-            
-          masked_context = masked_context.bool()
-          # labels[~masked_context] = -100  # We only compute loss on masked tokens
-          # batch_encoding['labels'][i] = labels
-          # no output? pytorch lightning connected somehow?
-          # userwarning validation epoch
+            masked_context = torch.cat((torch.ones(len(label_cntx)), masked_indices[input_sep_pos:]))
+
+            if len(labels) > masked_context.shape[0]:
+                add_tokens = len(labels) - masked_context.shape[0]
+                masked_context = torch.cat((masked_context, torch.zeros(add_tokens)))
+            elif masked_context.shape[0] > len(labels):
+                cut_tokens = masked_context.shape[0] - len(labels)
+                masked_context = masked_context[:-cut_tokens]
+
+            masked_context = masked_context.bool()
+            # labels[~masked_context] = -100  # We only compute loss on masked tokens
+            # batch_encoding['labels'][i] = labels
+
         return batch_encoding 
 
     def collate_fn(self, batch) -> Dict[str, torch.Tensor]:

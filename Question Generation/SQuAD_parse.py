@@ -38,5 +38,5 @@ def squad_json_to_dataframe(input_file_path='dev-v2.0.json',
 if __name__ == "__main__":
     record_path = ['data', 'paragraphs', 'qas', 'answers']
     dev = squad_json_to_dataframe(dev=1)
-    train = squad_json_to_dataframe(input_file_path='squad2.0/train-v2.0.json')
+    train = squad_json_to_dataframe(input_file_path='../squad2.0/train-v2.0.json')
     print(dev.head())

@@ -59,7 +59,7 @@ from transformers.configuration_fsmt import FSMTConfig
 from transformers.file_utils import is_torch_tpu_available
 
 try:
-    from .utils import label_smoothed_nll_loss
+    from utils import label_smoothed_nll_loss
 except ImportError:
     from utils import label_smoothed_nll_loss
 
@@ -356,7 +356,7 @@ def main():
                                 model_name_or_path="google/pegasus-xsum",
                                 cache_dir='/cache',
                                 )
-    data_args = DataTrainingArguments(data_dir="/data"
+    data_args = DataTrainingArguments(data_dir="../data"
                                       )
     training_args = Seq2SeqTrainingArguments(output_dir="/model",
                                       do_train=True,
